@@ -1,0 +1,9 @@
+# CheDataCheck (by VeriTakt Collective)
+> Client-side EN 16931 / XRechnung 3.0 / ZUGFeRD 2.3 pre-check tool (100 % local, zero server upload).
+
+- Validator: https://cheresonanz-design.github.io/chedatacheck-xrechnung/
+- XRechnung 3.0 Guide: https://cheresonanz-design.github.io/chedatacheck-xrechnung/xrechnung-pruefen/
+- ZUGFeRD 2.3 Validator: https://cheresonanz-design.github.io/chedatacheck-xrechnung/zugferd-validator/
+- German 2027 E-Invoice Mandate: https://cheresonanz-design.github.io/chedatacheck-xrechnung/erechnung-pflicht-2027/
+- Offers (39 EUR Audit-Kit & 2.500 EUR Rollout): https://cheresonanz-design.github.io/chedatacheck-xrechnung/pro/
+- Legal Imprint: https://cheresonanz-design.github.io/chedatacheck-xrechnung/legal/

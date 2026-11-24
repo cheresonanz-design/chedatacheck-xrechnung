@@ -62,6 +62,106 @@
         <div class="btn-row"><a href="mailto:che.resonanz@gmail.com?subject=Anfrage%20CheDataCheck%20Touchless%20E-Rechnung%20%26%20AP-Rollout%20%282.500%20EUR%29" class="btn btn-dark">B2B-Erstgespräch &amp; SOW anfragen</a></div>
       </div>
     </div>
+    
+    <div class="card" id="b2b-sow-configurator" style="margin-top:22px;">
+      <span class="badge badge-warn">CDC-B2B-ROLLOUT · Qualifizierte B2B-Anfrage (§ 14 BGB)</span>
+      <h2 style="margin-top:8px;">B2B-SOW-Anfrage vorbereiten (2.500 EUR B2B-Festpreis nach SOW)</h2>
+      <p class="muted">Konfigurieren Sie Ihre unverbindliche Leistungsschein-Anfrage (SOW). Sie erhalten vorab B2B-AGB, Leistungsbeschreibung (SOW) und bei Bedarf NDA/Art.-28-AVV.</p>
+      <p class="muted" style="margin-top:6px;">Fokus-Rollout #1: Keine Steuer- oder Rechtsberatung (§§ 2 RDG / 3 StBerG), ausschließlich technische Pre-Check- &amp; Export-Einrichtung.</p>
+      <div class="form-grid" style="margin-top:12px;">
+        <div><label for="sowCompany">Firma / Kanzlei &amp; Rechtsform *</label><input type="text" id="sowCompany" placeholder="z. B. Muster GmbH / Steuerkanzlei Beispiel" /></div>
+        <div><label for="sowContact">Ansprechpartner &amp; Rolle</label><input type="text" id="sowContact" placeholder="z. B. Max Mustermann, kaufm. Leitung" /></div>
+        <div><label for="sowVolume">Gewünschter Umfang / Volumen</label><select id="sowVolume"><option value="Bis 25 Eingangs-/Ausgangsrechnungen (UBL &amp; CII)">Bis 25 Eingangs-/Ausgangsrechnungen (UBL &amp; CII)</option><option value="26–50 Belegtypen + DATEV/Candis/finway-Exportpfad">26–50 Belegtypen + DATEV/Candis/finway-Exportpfad</option><option value="Individuelle Konzern-/Leitweg-ID-Regeln (SOW nach Aufwand)">Individuelle Konzern-/Leitweg-ID-Regeln (SOW nach Aufwand)</option></select></div>
+        <div><label for="sowPrivacy">Datenschutz-Modus</label><select id="sowPrivacy"><option value="Synthetische / anonymisierte Musterdaten (Standard)">Synthetische / anonymisierte Musterdaten (Standard)</option><option value="Verschlüsselter Datenaustausch erst nach Art.-28-AVV &amp; NDA">Verschlüsselter Transfer erst nach Art.-28-AVV &amp; NDA</option></select></div>
+      </div>
+      <div style="margin-top:12px;">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-weight:500;">
+          <input type="checkbox" id="sowB2BConfirm" style="width:auto;margin-top:3px;" />
+          <span>Bestätigung § 14 BGB: Diese Anfrage erfolgt ausschließlich als Unternehmer/in bzw. Kanzlei (kein Verbrauchergeschäft nach § 13 BGB). Die <a href="https://cheresonanz-design.github.io/opskanon-directory/agb/" target="_blank" rel="noopener">B2B-AGB</a> habe ich zur Kenntnis genommen.</span>
+        </label>
+      </div>
+      <div style="margin-top:12px;">
+        <label for="sowPreview">Vorschau Ihrer SOW-Anfrage</label>
+        <textarea id="sowPreview" readonly style="min-height:145px;"></textarea>
+      </div>
+      <div class="btn-row" style="align-items:center;">
+        <a id="sowMailBtn" href="mailto:che.resonanz@gmail.com" class="btn btn-primary">SOW-Anfrage im E-Mail-Programm öffnen</a>
+        <button type="button" id="sowCopyBtn" class="btn">Anfragetext kopieren</button>
+        <span id="sowStatus" class="muted" style="font-size:0.9rem;"></span>
+      </div>
+      <script>
+      (function () {
+        var cfg = {"offerCode": "CDC-B2B-ROLLOUT", "offerTitle": "Touchless E-Rechnung & AP-Rollout (Fokus #1)", "priceLabel": "2.500 EUR B2B-Festpreis nach SOW", "email": "che.resonanz@gmail.com"};
+        var compEl = document.getElementById("sowCompany");
+        var contEl = document.getElementById("sowContact");
+        var volEl = document.getElementById("sowVolume");
+        var privEl = document.getElementById("sowPrivacy");
+        var chkEl = document.getElementById("sowB2BConfirm");
+        var prevEl = document.getElementById("sowPreview");
+        var mailBtn = document.getElementById("sowMailBtn");
+        var copyBtn = document.getElementById("sowCopyBtn");
+        var statusEl = document.getElementById("sowStatus");
+        function buildBody() {
+          var comp = (compEl.value || "[Firma / Kanzlei eintragen]").trim();
+          var cont = (contEl.value || "[Ansprechpartner / Rolle]").trim();
+          var lines = [
+            "Guten Tag Herr Goncalves Menendez,",
+            "",
+            "wir möchten eine unverbindliche B2B-Leistungsschein-Anfrage (SOW) stellen:",
+            "- Angebot: " + cfg.offerCode + " — " + cfg.offerTitle + " (" + cfg.priceLabel + ")",
+            "- Unternehmen / Kanzlei (§ 14 BGB): " + comp,
+            "- Ansprechpartner: " + cont,
+            "- Umfang: " + volEl.value,
+            "- Datenschutz-Modus: " + privEl.value,
+            "- Bestätigung: Ausschließliches B2B-Mandat (§ 14 BGB), B2B-AGB zur Kenntnis genommen.",
+            "",
+            "Bitte senden Sie uns Terminvorschläge für das kurze Erstgespräch sowie SOW, B2B-AGB und NDA/Art.-28-AVV vorab zu.",
+            "",
+            "Mit freundlichen Grüßen",
+            cont
+          ];
+          return lines.join("\n");
+        }
+        function sync() {
+          var body = buildBody();
+          prevEl.value = body;
+          var subj = "B2B SOW-Anfrage " + cfg.offerCode + ": " + ((compEl.value || "Unternehmen").trim());
+          mailBtn.href = "mailto:" + cfg.email + "?subject=" + encodeURIComponent(subj) + "&body=" + encodeURIComponent(body);
+        }
+        [compEl, contEl, volEl, privEl, chkEl].forEach(function (el) {
+          el.addEventListener("input", sync);
+          el.addEventListener("change", sync);
+        });
+        mailBtn.addEventListener("click", function (ev) {
+          if (!chkEl.checked) {
+            ev.preventDefault();
+            statusEl.textContent = "Bitte zuerst die § 14 BGB Unternehmer-Bestätigung anhaken.";
+            chkEl.focus();
+            return;
+          }
+          statusEl.textContent = "E-Mail-Entwurf im lokalen Client geöffnet.";
+        });
+        copyBtn.addEventListener("click", function () {
+          if (!chkEl.checked) {
+            statusEl.textContent = "Bitte zuerst die § 14 BGB Unternehmer-Bestätigung anhaken.";
+            chkEl.focus();
+            return;
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(prevEl.value).then(function () {
+              statusEl.textContent = "Anfragetext in die Zwischenablage kopiert.";
+            });
+          } else {
+            prevEl.select();
+            document.execCommand("copy");
+            statusEl.textContent = "Anfragetext markiert/kopiert.";
+          }
+        });
+        sync();
+      })();
+      </script>
+    </div>
+    <div class="card" style="margin-top:18px;"><h2>Verwandte kostenlose B2B-Prüfwerkzeuge (100 % lokal)</h2><ul style="margin:8px 0 0 18px;line-height:1.65;"><li><a href="https://cheresonanz-design.github.io/chedatacheck-datev-kanzlei/" target="_blank" rel="noopener"><strong>CheDataCheck Kanzlei DATEV</strong></a> — SKR03/04, Fehlbelege &amp; CSV (0 EUR lokal)</li><li><a href="https://cheresonanz-design.github.io/chedatacheck-finops-audit/" target="_blank" rel="noopener"><strong>CheDataCheck FinOps</strong></a> — SaaS-, Lizenz- &amp; KI-Token-Audit (0 EUR lokal)</li><li><a href="https://cheresonanz-design.github.io/importklar-gpsr-customs/csrd-eudr/" target="_blank" rel="noopener"><strong>ImportKlar ESG</strong></a> — VSME-CO2e &amp; EUDR 2026/2027 Tracker (0 EUR lokal)</li><li><a href="https://cheresonanz-design.github.io/opskanon-directory/" target="_blank" rel="noopener"><strong>OpsKanon Verzeichnis</strong></a> — 51 kuratierte B2B- &amp; Compliance-Tools</li></ul></div>
   </main>
 
   <footer class="footer no-print">

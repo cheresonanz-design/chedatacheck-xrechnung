@@ -20,6 +20,7 @@
       runBtn: "Jetzt lokal prüfen",
       clearBtn: "Zurücksetzen",
       demoUbl: "Demo: Gültige XRechnung (UBL)",
+      demoKu: "Demo: § 19 UStG Kleinunternehmer",
       demoCii: "Demo: Gültiges ZUGFeRD (CII)",
       demoErr: "Demo: Fehlerhafte Rechnung",
       passTitle: "Vorabprüfung bestanden — bereit für ERP / DATEV",
@@ -42,6 +43,7 @@
       runBtn: "Run Local Pre-Check",
       clearBtn: "Reset",
       demoUbl: "Demo: Valid XRechnung (UBL)",
+      demoKu: "Demo: § 19 UStG Small Business",
       demoCii: "Demo: Valid ZUGFeRD (CII)",
       demoErr: "Demo: Invalid Invoice",
       passTitle: "Pre-Check Passed — Ready for ERP / Accounting",
@@ -81,6 +83,7 @@
     if (el("runCheckBtn")) el("runCheckBtn").textContent = t.runBtn;
     if (el("clearBtn")) el("clearBtn").textContent = t.clearBtn;
     if (el("demoUblBtn")) el("demoUblBtn").textContent = t.demoUbl;
+    if (el("demoKuBtn")) el("demoKuBtn").textContent = t.demoKu;
     if (el("demoCiiBtn")) el("demoCiiBtn").textContent = t.demoCii;
     if (el("demoErrBtn")) el("demoErrBtn").textContent = t.demoErr;
     if (el("copyMdBtn")) el("copyMdBtn").textContent = t.copyMd;
@@ -218,6 +221,13 @@
       el("demoUblBtn").addEventListener("click", () => {
         currentFileName = "demo_xrechnung_3_0_ubl.xml";
         el("xmlInput").value = engine.SAMPLES.valid_xrechnung_ubl;
+        runValidationFromTextarea();
+      });
+    }
+    if (el("demoKuBtn")) {
+      el("demoKuBtn").addEventListener("click", () => {
+        currentFileName = "demo_kleinunternehmer_19_ustg.xml";
+        el("xmlInput").value = engine.SAMPLES.valid_kleinunternehmer_ubl;
         runValidationFromTextarea();
       });
     }

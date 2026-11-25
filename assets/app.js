@@ -24,6 +24,7 @@
       demoCn: "Demo: Gutschrift (381 CreditNote)",
       demoRc: "Demo: § 13b Reverse Charge (AE)",
       demoEu: "Demo: EU B2B Steuerfrei (K)",
+      demoExport: "Demo: Drittland Export (G)",
       demoCii: "Demo: Gültiges ZUGFeRD (CII)",
       demoErr: "Demo: Fehlerhafte Rechnung",
       passTitle: "Vorabprüfung bestanden — bereit für ERP / DATEV",
@@ -50,6 +51,7 @@
       demoCn: "Demo: Credit Note (381 UBL)",
       demoRc: "Demo: § 13b Reverse Charge (AE)",
       demoEu: "Demo: EU B2B Intra-EU (K)",
+      demoExport: "Demo: 3rd-Country Export (G)",
       demoCii: "Demo: Valid ZUGFeRD (CII)",
       demoErr: "Demo: Invalid Invoice",
       passTitle: "Pre-Check Passed — Ready for ERP / Accounting",
@@ -93,6 +95,7 @@
     if (el("demoCnBtn")) el("demoCnBtn").textContent = t.demoCn;
     if (el("demoRcBtn")) el("demoRcBtn").textContent = t.demoRc;
     if (el("demoEuBtn")) el("demoEuBtn").textContent = t.demoEu;
+    if (el("demoExportBtn")) el("demoExportBtn").textContent = t.demoExport;
     if (el("demoCiiBtn")) el("demoCiiBtn").textContent = t.demoCii;
     if (el("demoErrBtn")) el("demoErrBtn").textContent = t.demoErr;
     if (el("copyMdBtn")) el("copyMdBtn").textContent = t.copyMd;
@@ -258,6 +261,13 @@
       el("demoEuBtn").addEventListener("click", () => {
         currentFileName = "demo_eu_b2b_intra_community_k_ubl.xml";
         el("xmlInput").value = engine.SAMPLES.valid_intra_eu_ubl;
+        runValidationFromTextarea();
+      });
+    }
+    if (el("demoExportBtn")) {
+      el("demoExportBtn").addEventListener("click", () => {
+        currentFileName = "demo_drittland_export_g_ubl.xml";
+        el("xmlInput").value = engine.SAMPLES.valid_export_ubl;
         runValidationFromTextarea();
       });
     }

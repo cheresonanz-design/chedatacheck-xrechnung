@@ -298,7 +298,16 @@
 
     // BT-10 Buyer Reference / Leitweg-ID
     if (buyerRef) {
-      addCheck("BT-10", "Buyer Reference / Leitweg-ID", "PASS", "BuyerReference present (required for XRechnung).", buyerRef);
+      const isLeitweg = /^\d{2,12}-[A-Za-z0-9]{1,30}-\d{2}$/.test(buyerRef);
+      addCheck(
+        "BT-10",
+        "Buyer Reference / Leitweg-ID",
+        "PASS",
+        isLeitweg
+          ? "German B2G Leitweg-ID format verified and BuyerReference present."
+          : "BuyerReference present (required for XRechnung).",
+        buyerRef
+      );
     } else {
       addCheck("BT-10", "Buyer Reference / Leitweg-ID", "WARN", "BuyerReference (BT-10 / Leitweg-ID) is missing; mandatory in XRechnung public/B2G & recommended in B2B.");
     }
@@ -347,10 +356,12 @@
     if (Number.isFinite(netAmount) && Number.isFinite(grossAmount) && Number.isFinite(payableAmount)) {
       if (payableAmount < 0) {
         addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "FAIL", `PayableAmount (${payableAmount.toFixed(2)}) must not be negative for standard invoices.`);
-      } else if ((taxCategoryCode === "AE" || taxCategoryCode === "K") && Number.isFinite(taxAmount) && Math.abs(taxAmount) > 0.001) {
+      } else if ((taxCategoryCode === "AE" || taxCategoryCode === "K" || taxCategoryCode === "G") && Number.isFinite(taxAmount) && Math.abs(taxAmount) > 0.001) {
         const taxLabel = taxCategoryCode === "AE"
           ? "Reverse Charge (§ 13b UStG / CategoryCode AE)"
-          : "Intra-community supply (§ 4 Nr. 1b UStG / CategoryCode K)";
+          : taxCategoryCode === "K"
+            ? "Intra-community supply (§ 4 Nr. 1b UStG / CategoryCode K)"
+            : "Third-country export (§ 4 Nr. 1a UStG / CategoryCode G)";
         addCheck(
           "BG-22-MATH",
           "Tax & Payable Math Consistency",
@@ -371,7 +382,9 @@
             ? " (Reverse Charge § 13b UStG, AE)"
             : taxCategoryCode === "K"
               ? " (Intra-EU Supply § 4 Nr. 1b UStG, K)"
-              : "";
+              : taxCategoryCode === "G"
+                ? " (Third-Country Export § 4 Nr. 1a UStG, G)"
+                : "";
           addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "PASS", `Net + Tax (${taxAmount.toFixed(2)}) matches Gross (${grossAmount.toFixed(2)})${taxNote}.`);
         }
       } else {
@@ -428,6 +441,7 @@
         tax_category: taxCategoryCode || "",
         reverse_charge: taxCategoryCode === "AE",
         intra_eu_supply: taxCategoryCode === "K",
+        export_supply: taxCategoryCode === "G",
       },
       parties: {
         invoice_id: invoiceId,
@@ -955,6 +969,66 @@
     <cbc:TaxExclusiveAmount currencyID="EUR">3200.00</cbc:TaxExclusiveAmount>
     <cbc:TaxInclusiveAmount currencyID="EUR">3200.00</cbc:TaxInclusiveAmount>
     <cbc:PayableAmount currencyID="EUR">3200.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+  </cac:InvoiceLine>
+</ubl:Invoice>`,
+
+    valid_export_ubl: `<?xml version="1.0" encoding="UTF-8"?>
+<ubl:Invoice xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+             xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+             xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2">
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0</cbc:CustomizationID>
+  <cbc:ID>EX-2026-0412</cbc:ID>
+  <cbc:IssueDate>2026-11-25</cbc:IssueDate>
+  <cbc:DueDate>2026-12-09</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+  <cbc:Note>Steuerfreie Ausfuhrlieferung / Drittlandsexport (§ 4 Nr. 1a i. V. m. § 6 UStG).</cbc:Note>
+  <cbc:BuyerReference>CH-ZURICH-2026-18</cbc:BuyerReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>DE123456789</cbc:CompanyID>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>HanseOps Beratung GmbH</cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>Limmat Precision AG (CH)</cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:PaymentMeans>
+    <cac:PaymentMeansCode>58</cac:PaymentMeansCode>
+    <cac:PayeeFinancialAccount>
+      <cbc:ID>DE89370400440532013000</cbc:ID>
+    </cac:PayeeFinancialAccount>
+  </cac:PaymentMeans>
+  <cac:PaymentTerms>
+    <cbc:Note>14 Tage netto (Drittlandsexport § 4 Nr. 1a UStG)</cbc:Note>
+  </cac:PaymentTerms>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="EUR">0.00</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">2500.00</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">0.00</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>G</cbc:ID>
+        <cbc:Percent>0.00</cbc:Percent>
+        <cbc:TaxExemptionReason>Ausfuhrlieferung Drittland (§ 4 Nr. 1a UStG)</cbc:TaxExemptionReason>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:TaxExclusiveAmount currencyID="EUR">2500.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">2500.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="EUR">2500.00</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>
   <cac:InvoiceLine>
     <cbc:ID>1</cbc:ID>

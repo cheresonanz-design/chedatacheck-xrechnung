@@ -184,6 +184,7 @@
     let sellerName = "";
     let sellerVatOrTax = "";
     let buyerName = "";
+    let buyerVatId = "";
     let netAmount = NaN;
     let taxAmount = NaN;
     let grossAmount = NaN;
@@ -206,6 +207,7 @@
       sellerName = findFirstText(sellerBlock, ["RegistrationName", "Name"]);
       sellerVatOrTax = findFirstText(sellerBlock, ["CompanyID"]);
       buyerName = findFirstText(buyerBlock, ["RegistrationName", "Name"]);
+      buyerVatId = findFirstText(buyerBlock, ["CompanyID"]).toUpperCase();
       const paymentBlock = findFirstBlock(xml, ["PaymentMeans"]);
       const payeeAcct = findFirstBlock(paymentBlock, ["PayeeFinancialAccount"]);
       iban = findFirstText(payeeAcct, ["ID"]);
@@ -240,6 +242,7 @@
       sellerName = findFirstText(sellerBlock, ["Name"]);
       sellerVatOrTax = findFirstText(sellerBlock, ["ID"]);
       buyerName = findFirstText(buyerBlock, ["Name"]);
+      buyerVatId = findFirstText(buyerBlock, ["ID"]).toUpperCase();
       const tradeTaxBlock = findFirstBlock(settlementBlock, ["ApplicableTradeTax"]);
       taxCategoryCode = findFirstText(tradeTaxBlock, ["CategoryCode"]).toUpperCase();
       const sumBlock = findFirstBlock(settlementBlock, ["SpecifiedTradeSettlementHeaderMonetarySummation"]);
@@ -320,6 +323,15 @@
       addCheck("BG-7", "Buyer Identity", "FAIL", "Missing Buyer party name (BG-7).");
     }
 
+    // BT-48 Buyer VAT ID required for Intra-EU Supply (CategoryCode K)
+    if (taxCategoryCode === "K") {
+      if (buyerVatId && /^[A-Z]{2}[A-Z0-9]{2,14}$/.test(buyerVatId)) {
+        addCheck("BT-48", "Buyer EU VAT ID (Category K)", "PASS", `Valid Buyer EU VAT ID '${buyerVatId}' for intra-community supply (§ 4 Nr. 1b / § 6a UStG).`, buyerVatId);
+      } else {
+        addCheck("BT-48", "Buyer EU VAT ID (Category K)", "FAIL", "Intra-community supply (CategoryCode K) requires a valid Buyer EU VAT ID (BT-48).");
+      }
+    }
+
     // BG-22 Monetary Totals & Math Sanity
     if (Number.isFinite(netAmount) && Number.isFinite(grossAmount) && Number.isFinite(payableAmount)) {
       if (grossAmount + 0.001 < netAmount) {
@@ -335,12 +347,15 @@
     if (Number.isFinite(netAmount) && Number.isFinite(grossAmount) && Number.isFinite(payableAmount)) {
       if (payableAmount < 0) {
         addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "FAIL", `PayableAmount (${payableAmount.toFixed(2)}) must not be negative for standard invoices.`);
-      } else if (taxCategoryCode === "AE" && Number.isFinite(taxAmount) && Math.abs(taxAmount) > 0.001) {
+      } else if ((taxCategoryCode === "AE" || taxCategoryCode === "K") && Number.isFinite(taxAmount) && Math.abs(taxAmount) > 0.001) {
+        const taxLabel = taxCategoryCode === "AE"
+          ? "Reverse Charge (§ 13b UStG / CategoryCode AE)"
+          : "Intra-community supply (§ 4 Nr. 1b UStG / CategoryCode K)";
         addCheck(
           "BG-22-MATH",
           "Tax & Payable Math Consistency",
           "FAIL",
-          `Reverse Charge (§ 13b UStG / CategoryCode AE) requires TaxAmount = 0.00, got ${taxAmount.toFixed(2)}.`
+          `${taxLabel} requires TaxAmount = 0.00, got ${taxAmount.toFixed(2)}.`
         );
       } else if (Number.isFinite(taxAmount)) {
         const expectedGross = netAmount + taxAmount;
@@ -352,8 +367,12 @@
             `Net (${netAmount.toFixed(2)}) + Tax (${taxAmount.toFixed(2)}) = ${expectedGross.toFixed(2)} does not match Gross (${grossAmount.toFixed(2)}).`
           );
         } else {
-          const rcNote = taxCategoryCode === "AE" ? " (Reverse Charge § 13b UStG, AE)" : "";
-          addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "PASS", `Net + Tax (${taxAmount.toFixed(2)}) matches Gross (${grossAmount.toFixed(2)})${rcNote}.`);
+          const taxNote = taxCategoryCode === "AE"
+            ? " (Reverse Charge § 13b UStG, AE)"
+            : taxCategoryCode === "K"
+              ? " (Intra-EU Supply § 4 Nr. 1b UStG, K)"
+              : "";
+          addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "PASS", `Net + Tax (${taxAmount.toFixed(2)}) matches Gross (${grossAmount.toFixed(2)})${taxNote}.`);
         }
       } else {
         addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "PASS", "Monetary totals non-negative and Gross >= Net.");
@@ -408,6 +427,7 @@
         line_count: lineCount,
         tax_category: taxCategoryCode || "",
         reverse_charge: taxCategoryCode === "AE",
+        intra_eu_supply: taxCategoryCode === "K",
       },
       parties: {
         invoice_id: invoiceId,
@@ -417,6 +437,7 @@
         seller_name: sellerName,
         seller_tax_id: sellerVatOrTax,
         buyer_name: buyerName,
+        buyer_vat_id: buyerVatId,
         iban,
       },
     };
@@ -876,6 +897,69 @@
     </rsm:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`,
+
+    valid_intra_eu_ubl: `<?xml version="1.0" encoding="UTF-8"?>
+<ubl:Invoice xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+             xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+             xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2">
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0</cbc:CustomizationID>
+  <cbc:ID>EU-2026-0307</cbc:ID>
+  <cbc:IssueDate>2026-11-25</cbc:IssueDate>
+  <cbc:DueDate>2026-12-09</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+  <cbc:Note>Steuerfreie innergemeinschaftliche Lieferung (§ 4 Nr. 1b i. V. m. § 6a UStG).</cbc:Note>
+  <cbc:BuyerReference>EU-B2B-FR-99</cbc:BuyerReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>DE123456789</cbc:CompanyID>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>HanseOps Beratung GmbH</cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyTaxScheme>
+        <cbc:CompanyID>FR12345678901</cbc:CompanyID>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>Atelier Lyon SAS</cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:PaymentMeans>
+    <cac:PaymentMeansCode>58</cac:PaymentMeansCode>
+    <cac:PayeeFinancialAccount>
+      <cbc:ID>DE89370400440532013000</cbc:ID>
+    </cac:PayeeFinancialAccount>
+  </cac:PaymentMeans>
+  <cac:PaymentTerms>
+    <cbc:Note>14 Tage netto (Innergemeinschaftliche Lieferung)</cbc:Note>
+  </cac:PaymentTerms>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="EUR">0.00</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">3200.00</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">0.00</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>K</cbc:ID>
+        <cbc:Percent>0.00</cbc:Percent>
+        <cbc:TaxExemptionReason>Innergemeinschaftliche Lieferung (§ 4 Nr. 1b UStG)</cbc:TaxExemptionReason>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:TaxExclusiveAmount currencyID="EUR">3200.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">3200.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="EUR">3200.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+  </cac:InvoiceLine>
+</ubl:Invoice>`,
   };
 
   return {

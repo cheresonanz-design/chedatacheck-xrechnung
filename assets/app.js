@@ -22,6 +22,7 @@
       demoUbl: "Demo: Gültige XRechnung (UBL)",
       demoKu: "Demo: § 19 UStG Kleinunternehmer",
       demoCn: "Demo: Gutschrift (381 CreditNote)",
+      demoRc: "Demo: § 13b Reverse Charge (AE)",
       demoCii: "Demo: Gültiges ZUGFeRD (CII)",
       demoErr: "Demo: Fehlerhafte Rechnung",
       passTitle: "Vorabprüfung bestanden — bereit für ERP / DATEV",
@@ -46,6 +47,7 @@
       demoUbl: "Demo: Valid XRechnung (UBL)",
       demoKu: "Demo: § 19 UStG Small Business",
       demoCn: "Demo: Credit Note (381 UBL)",
+      demoRc: "Demo: § 13b Reverse Charge (AE)",
       demoCii: "Demo: Valid ZUGFeRD (CII)",
       demoErr: "Demo: Invalid Invoice",
       passTitle: "Pre-Check Passed — Ready for ERP / Accounting",
@@ -87,6 +89,7 @@
     if (el("demoUblBtn")) el("demoUblBtn").textContent = t.demoUbl;
     if (el("demoKuBtn")) el("demoKuBtn").textContent = t.demoKu;
     if (el("demoCnBtn")) el("demoCnBtn").textContent = t.demoCn;
+    if (el("demoRcBtn")) el("demoRcBtn").textContent = t.demoRc;
     if (el("demoCiiBtn")) el("demoCiiBtn").textContent = t.demoCii;
     if (el("demoErrBtn")) el("demoErrBtn").textContent = t.demoErr;
     if (el("copyMdBtn")) el("copyMdBtn").textContent = t.copyMd;
@@ -238,6 +241,13 @@
       el("demoCnBtn").addEventListener("click", () => {
         currentFileName = "demo_gutschrift_381_ubl.xml";
         el("xmlInput").value = engine.SAMPLES.valid_credit_note_ubl;
+        runValidationFromTextarea();
+      });
+    }
+    if (el("demoRcBtn")) {
+      el("demoRcBtn").addEventListener("click", () => {
+        currentFileName = "demo_reverse_charge_13b_cii.xml";
+        el("xmlInput").value = engine.SAMPLES.valid_reverse_charge_cii;
         runValidationFromTextarea();
       });
     }

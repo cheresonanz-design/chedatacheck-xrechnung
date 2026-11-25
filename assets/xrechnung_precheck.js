@@ -188,6 +188,7 @@
     let taxAmount = NaN;
     let grossAmount = NaN;
     let payableAmount = NaN;
+    let taxCategoryCode = "";
     let iban = "";
     let lineCount = 0;
 
@@ -210,6 +211,8 @@
       iban = findFirstText(payeeAcct, ["ID"]);
       const taxTotalBlock = findFirstBlock(xml, ["TaxTotal"]);
       taxAmount = parseNumber(findFirstText(taxTotalBlock, ["TaxAmount"]));
+      const taxCatBlock = findFirstBlock(taxTotalBlock || xml, ["TaxCategory", "ClassifiedTaxCategory"]);
+      taxCategoryCode = findFirstText(taxCatBlock, ["ID"]).toUpperCase();
       const monetaryBlock = findFirstBlock(xml, ["LegalMonetaryTotal"]);
       netAmount = parseNumber(findFirstText(monetaryBlock, ["TaxExclusiveAmount"]));
       grossAmount = parseNumber(findFirstText(monetaryBlock, ["TaxInclusiveAmount"]));
@@ -237,6 +240,8 @@
       sellerName = findFirstText(sellerBlock, ["Name"]);
       sellerVatOrTax = findFirstText(sellerBlock, ["ID"]);
       buyerName = findFirstText(buyerBlock, ["Name"]);
+      const tradeTaxBlock = findFirstBlock(settlementBlock, ["ApplicableTradeTax"]);
+      taxCategoryCode = findFirstText(tradeTaxBlock, ["CategoryCode"]).toUpperCase();
       const sumBlock = findFirstBlock(settlementBlock, ["SpecifiedTradeSettlementHeaderMonetarySummation"]);
       netAmount = parseNumber(findFirstText(sumBlock, ["TaxBasisTotalAmount"]));
       taxAmount = parseNumber(findFirstText(sumBlock, ["TaxTotalAmount"]));
@@ -330,6 +335,13 @@
     if (Number.isFinite(netAmount) && Number.isFinite(grossAmount) && Number.isFinite(payableAmount)) {
       if (payableAmount < 0) {
         addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "FAIL", `PayableAmount (${payableAmount.toFixed(2)}) must not be negative for standard invoices.`);
+      } else if (taxCategoryCode === "AE" && Number.isFinite(taxAmount) && Math.abs(taxAmount) > 0.001) {
+        addCheck(
+          "BG-22-MATH",
+          "Tax & Payable Math Consistency",
+          "FAIL",
+          `Reverse Charge (§ 13b UStG / CategoryCode AE) requires TaxAmount = 0.00, got ${taxAmount.toFixed(2)}.`
+        );
       } else if (Number.isFinite(taxAmount)) {
         const expectedGross = netAmount + taxAmount;
         if (Math.abs(expectedGross - grossAmount) > 0.02) {
@@ -340,7 +352,8 @@
             `Net (${netAmount.toFixed(2)}) + Tax (${taxAmount.toFixed(2)}) = ${expectedGross.toFixed(2)} does not match Gross (${grossAmount.toFixed(2)}).`
           );
         } else {
-          addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "PASS", `Net + Tax (${taxAmount.toFixed(2)}) matches Gross (${grossAmount.toFixed(2)}).`);
+          const rcNote = taxCategoryCode === "AE" ? " (Reverse Charge § 13b UStG, AE)" : "";
+          addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "PASS", `Net + Tax (${taxAmount.toFixed(2)}) matches Gross (${grossAmount.toFixed(2)})${rcNote}.`);
         }
       } else {
         addCheck("BG-22-MATH", "Tax & Payable Math Consistency", "PASS", "Monetary totals non-negative and Gross >= Net.");
@@ -393,6 +406,8 @@
         gross_amount: Number.isFinite(grossAmount) ? grossAmount : null,
         payable_amount: Number.isFinite(payableAmount) ? payableAmount : null,
         line_count: lineCount,
+        tax_category: taxCategoryCode || "",
+        reverse_charge: taxCategoryCode === "AE",
       },
       parties: {
         invoice_id: invoiceId,
@@ -804,6 +819,63 @@
     <cbc:ID>1</cbc:ID>
   </cac:CreditNoteLine>
 </ubl:CreditNote>`,
+
+    valid_reverse_charge_cii: `<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
+                          xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+                          xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocument>
+    <ram:ID>RC-2026-0089</ram:ID>
+    <ram:TypeCode>380</ram:TypeCode>
+    <ram:IssueDateTime><udt:DateTimeString format="102">20261125</udt:DateTimeString></ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+    <ram:IncludedSupplyChainTradeLineItem>
+      <ram:AssociatedDocumentLineDocument><ram:LineID>1</ram:LineID></ram:AssociatedDocumentLineDocument>
+    </ram:IncludedSupplyChainTradeLineItem>
+    <ram:ApplicableHeaderTradeAgreement>
+      <ram:BuyerReference>EU-B2B-2026-41</ram:BuyerReference>
+      <ram:SellerTradeParty>
+        <ram:Name>Alpine Tech Ops GmbH</ram:Name>
+        <ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">ATU12345678</ram:ID></ram:SpecifiedTaxRegistration>
+      </ram:SellerTradeParty>
+      <ram:BuyerTradeParty>
+        <ram:Name>Weserwerk Digital GmbH</ram:Name>
+      </ram:BuyerTradeParty>
+    </ram:ApplicableHeaderTradeAgreement>
+    <rsm:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:SpecifiedTradeSettlementPaymentMeans>
+        <ram:PayeePartyCreditorFinancialAccount>
+          <ram:IBANID>DE89370400440532013000</ram:IBANID>
+        </ram:PayeePartyCreditorFinancialAccount>
+      </ram:SpecifiedTradeSettlementPaymentMeans>
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        <ram:ExemptionReason>Steuerschuldnerschaft des Leistungsempfängers (§ 13b UStG / Reverse Charge)</ram:ExemptionReason>
+        <ram:BasisAmount>1800.00</ram:BasisAmount>
+        <ram:CategoryCode>AE</ram:CategoryCode>
+        <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>
+      <ram:SpecifiedTradePaymentTerms>
+        <ram:Description>14 Tage netto (Reverse Charge § 13b UStG)</ram:Description>
+        <ram:DueDateDateTime><udt:DateTimeString format="102">20261209</udt:DateTimeString></ram:DueDateDateTime>
+      </ram:SpecifiedTradePaymentTerms>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:TaxBasisTotalAmount>1800.00</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount>0.00</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>1800.00</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>1800.00</ram:DuePayableAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </rsm:ApplicableHeaderTradeSettlement>
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>`,
   };
 
   return {
